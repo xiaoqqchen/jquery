@@ -18,10 +18,10 @@ function getComputedSupport( support ) {
 }
 
 if ( jQuery.css ) {
-	testIframeWithCallback(
+	testIframe(
 		"body background is not lost if set prior to loading jQuery (#9239)",
 		"support/bodyBackground.html",
-		function( color, support, assert ) {
+		function( assert, jQuery, window, document, color, support ) {
 			assert.expect( 2 );
 			var okValue = {
 				"#000000": true,
@@ -29,21 +29,23 @@ if ( jQuery.css ) {
 			};
 			assert.ok( okValue[ color ], "color was not reset (" + color + ")" );
 
-			assert.deepEqual( jQuery.extend( {}, support ), computedSupport, "Same support properties" );
+			assert.deepEqual( jQuery.extend( {}, support ), computedSupport,
+				"Same support properties" );
 		}
 	);
 }
 
 // This test checks CSP only for browsers with "Content-Security-Policy" header support
 // i.e. no old WebKit or old Firefox
-testIframeWithCallback(
+testIframe(
 	"Check CSP (https://developer.mozilla.org/en-US/docs/Security/CSP) restrictions",
 	"support/csp.php",
-	function( support, assert ) {
+	function( assert, jQuery, window, document, support ) {
 		var done = assert.async();
 
 		assert.expect( 2 );
-		assert.deepEqual( jQuery.extend( {}, support ), computedSupport, "No violations of CSP polices" );
+		assert.deepEqual( jQuery.extend( {}, support ), computedSupport,
+			"No violations of CSP polices" );
 
 		supportjQuery.get( "data/support/csp.log" ).done( function( data ) {
 			assert.equal( data, "", "No log request should be sent" );
@@ -53,26 +55,26 @@ testIframeWithCallback(
 );
 
 ( function() {
-	var expected,
+	var expected, version,
 		userAgent = window.navigator.userAgent;
 
 	if ( /edge\//i.test( userAgent ) ) {
+		version = userAgent.match( /edge\/(\d+)/i )[ 1 ];
 		expected = {
 			"ajax": true,
 			"boxSizingReliable": true,
 			"checkClone": true,
 			"checkOn": true,
-			"clearCloneStyle": false,
+			"clearCloneStyle": version >= 13,
 			"cors": true,
 			"createHTMLDocument": true,
 			"focusin": false,
 			"noCloneChecked": true,
-			"optDisabled": true,
 			"optSelected": true,
 			"pixelMarginRight": true,
 			"pixelPosition": true,
 			"radioValue": true,
-			"reliableMarginRight": true
+			"reliableMarginLeft": true
 		};
 	} else if ( /(msie 10\.0|trident\/7\.0)/i.test( userAgent ) ) {
 		expected = {
@@ -85,12 +87,11 @@ testIframeWithCallback(
 			"createHTMLDocument": true,
 			"focusin": true,
 			"noCloneChecked": false,
-			"optDisabled": true,
 			"optSelected": false,
 			"pixelMarginRight": true,
 			"pixelPosition": true,
 			"radioValue": false,
-			"reliableMarginRight": true
+			"reliableMarginLeft": true
 		};
 	} else if ( /msie 9\.0/i.test( userAgent ) ) {
 		expected = {
@@ -103,12 +104,11 @@ testIframeWithCallback(
 			"createHTMLDocument": true,
 			"focusin": true,
 			"noCloneChecked": false,
-			"optDisabled": true,
 			"optSelected": false,
 			"pixelMarginRight": true,
 			"pixelPosition": true,
 			"radioValue": false,
-			"reliableMarginRight": true
+			"reliableMarginLeft": true
 		};
 	} else if ( /chrome/i.test( userAgent ) ) {
 
@@ -124,12 +124,28 @@ testIframeWithCallback(
 			"createHTMLDocument": true,
 			"focusin": false,
 			"noCloneChecked": true,
-			"optDisabled": true,
 			"optSelected": true,
 			"pixelMarginRight": true,
 			"pixelPosition": true,
 			"radioValue": true,
-			"reliableMarginRight": true
+			"reliableMarginLeft": true
+		};
+	} else if ( /\b9\.\d(\.\d+)* safari/i.test( userAgent ) ) {
+		expected = {
+			"ajax": true,
+			"boxSizingReliable": true,
+			"checkClone": true,
+			"checkOn": true,
+			"clearCloneStyle": true,
+			"cors": true,
+			"createHTMLDocument": true,
+			"focusin": false,
+			"noCloneChecked": true,
+			"optSelected": true,
+			"pixelMarginRight": true,
+			"pixelPosition": false,
+			"radioValue": true,
+			"reliableMarginLeft": true
 		};
 	} else if ( /8\.0(\.\d+|) safari/i.test( userAgent ) ) {
 		expected = {
@@ -142,30 +158,11 @@ testIframeWithCallback(
 			"createHTMLDocument": false,
 			"focusin": false,
 			"noCloneChecked": true,
-			"optDisabled": true,
 			"optSelected": true,
 			"pixelMarginRight": true,
 			"pixelPosition": false,
 			"radioValue": true,
-			"reliableMarginRight": true
-		};
-	} else if ( /7\.0(\.\d+|) safari/i.test( userAgent ) ) {
-		expected = {
-			"ajax": true,
-			"boxSizingReliable": true,
-			"checkClone": true,
-			"checkOn": true,
-			"clearCloneStyle": true,
-			"cors": true,
-			"createHTMLDocument": true,
-			"focusin": false,
-			"noCloneChecked": true,
-			"optDisabled": true,
-			"optSelected": true,
-			"pixelMarginRight": true,
-			"pixelPosition": false,
-			"radioValue": true,
-			"reliableMarginRight": true
+			"reliableMarginLeft": true
 		};
 	} else if ( /firefox/i.test( userAgent ) ) {
 		expected = {
@@ -178,32 +175,13 @@ testIframeWithCallback(
 			"createHTMLDocument": true,
 			"focusin": false,
 			"noCloneChecked": true,
-			"optDisabled": true,
 			"optSelected": true,
 			"pixelMarginRight": true,
 			"pixelPosition": true,
 			"radioValue": true,
-			"reliableMarginRight": true
+			"reliableMarginLeft": false
 		};
-	} else if ( /iphone os 8/i.test( userAgent ) ) {
-		expected = {
-			"ajax": true,
-			"boxSizingReliable": true,
-			"checkClone": true,
-			"checkOn": true,
-			"clearCloneStyle": true,
-			"cors": true,
-			"createHTMLDocument": false,
-			"focusin": false,
-			"noCloneChecked": true,
-			"optDisabled": true,
-			"optSelected": true,
-			"pixelMarginRight": true,
-			"pixelPosition": false,
-			"radioValue": true,
-			"reliableMarginRight": true
-		};
-	} else if ( /iphone os (6|7)/i.test( userAgent ) ) {
+	} else if ( /iphone os 9_/i.test( userAgent ) ) {
 		expected = {
 			"ajax": true,
 			"boxSizingReliable": true,
@@ -214,12 +192,45 @@ testIframeWithCallback(
 			"createHTMLDocument": true,
 			"focusin": false,
 			"noCloneChecked": true,
-			"optDisabled": true,
 			"optSelected": true,
 			"pixelMarginRight": true,
 			"pixelPosition": false,
 			"radioValue": true,
-			"reliableMarginRight": true
+			"reliableMarginLeft": true
+		};
+	} else if ( /iphone os 8_/i.test( userAgent ) ) {
+		expected = {
+			"ajax": true,
+			"boxSizingReliable": true,
+			"checkClone": true,
+			"checkOn": true,
+			"clearCloneStyle": true,
+			"cors": true,
+			"createHTMLDocument": false,
+			"focusin": false,
+			"noCloneChecked": true,
+			"optSelected": true,
+			"pixelMarginRight": true,
+			"pixelPosition": false,
+			"radioValue": true,
+			"reliableMarginLeft": true
+		};
+	} else if ( /iphone os 7_/i.test( userAgent ) ) {
+		expected = {
+			"ajax": true,
+			"boxSizingReliable": true,
+			"checkClone": true,
+			"checkOn": true,
+			"clearCloneStyle": true,
+			"cors": true,
+			"createHTMLDocument": true,
+			"focusin": false,
+			"noCloneChecked": true,
+			"optSelected": true,
+			"pixelMarginRight": true,
+			"pixelPosition": false,
+			"radioValue": true,
+			"reliableMarginLeft": true
 		};
 	} else if ( /android 4\.[0-3]/i.test( userAgent ) ) {
 		expected = {
@@ -232,56 +243,38 @@ testIframeWithCallback(
 			"createHTMLDocument": true,
 			"focusin": false,
 			"noCloneChecked": true,
-			"optDisabled": true,
 			"optSelected": true,
 			"pixelMarginRight": false,
 			"pixelPosition": false,
 			"radioValue": true,
-			"reliableMarginRight": true
-		};
-	} else if ( /android 2\.3/i.test( userAgent ) ) {
-		expected = {
-			"ajax": true,
-			"boxSizingReliable": true,
-			"checkClone": true,
-			"checkOn": false,
-			"clearCloneStyle": false,
-			"cors": true,
-			"createHTMLDocument": true,
-			"focusin": false,
-			"noCloneChecked": true,
-			"optDisabled": false,
-			"optSelected": true,
-			"pixelMarginRight": true,
-			"pixelPosition": false,
-			"radioValue": true,
-			"reliableMarginRight": false
+			"reliableMarginLeft": false
 		};
 	}
 
-	if ( expected ) {
-		QUnit.test( "Verify that the support tests resolve as expected per browser", function( assert ) {
-			var i, prop,
-				j = 0;
+	QUnit.test( "Verify that support tests resolve as expected per browser", function( assert ) {
+		if ( !expected ) {
+			assert.expect( 1 );
+			assert.ok( false, "Known client: " + userAgent );
+		}
 
-			for ( prop in computedSupport ) {
-				j++;
+		var i, prop,
+			j = 0;
+
+		for ( prop in computedSupport ) {
+			j++;
+		}
+
+		assert.expect( j );
+
+		for ( i in expected ) {
+			if ( jQuery.ajax || i !== "ajax" && i !== "cors" ) {
+				assert.equal( computedSupport[ i ], expected[ i ],
+					"jQuery.support['" + i + "']: " + computedSupport[ i ] +
+						", expected['" + i + "']: " + expected[ i ] );
+			} else {
+				assert.ok( true, "no ajax; skipping jQuery.support['" + i + "']" );
 			}
-
-			assert.expect( j );
-
-			for ( i in expected ) {
-
-				// TODO check for all modules containing support properties
-				if ( jQuery.ajax || i !== "ajax" && i !== "cors" ) {
-					assert.equal( computedSupport[ i ], expected[ i ],
-						"jQuery.support['" + i + "']: " + computedSupport[ i ] +
-							", expected['" + i + "']: " + expected[ i ] );
-				} else {
-					assert.ok( true, "no ajax; skipping jQuery.support[' " + i + " ']" );
-				}
-			}
-		} );
-	}
+		}
+	} );
 
 } )();

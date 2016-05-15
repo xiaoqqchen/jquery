@@ -2,7 +2,8 @@ module.exports = function( grunt ) {
 	"use strict";
 
 	function readOptionalJSON( filepath ) {
-		var data = {};
+		var stripJSONComments = require( "strip-json-comments" ),
+			data = {};
 		try {
 			data = JSON.parse( stripJSONComments(
 				fs.readFileSync( filepath, { encoding: "utf8" } )
@@ -12,24 +13,15 @@ module.exports = function( grunt ) {
 	}
 
 	var fs = require( "fs" ),
-		stripJSONComments = require( "strip-json-comments" ),
 		gzip = require( "gzip-js" ),
 		srcHintOptions = readOptionalJSON( "src/.jshintrc" ),
-		newNode = !/^v0/.test( process.version ),
 
-		// Allow to skip jsdom-related tests in Node.js < 1.0.0
-		runJsdomTests = newNode || ( function() {
-			try {
-				require( "jsdom" );
-				return true;
-			} catch ( e ) {
-				return false;
-			}
-		} )();
+		// Skip jsdom-related tests in Node.js 0.10 & 0.12
+		runJsdomTests = !/^v0/.test( process.version );
 
-	// The concatenated file won't pass onevar
-	// But our modules can
-	delete srcHintOptions.onevar;
+	if ( !grunt.option( "filename" ) ) {
+		grunt.option( "filename", "jquery.js" );
+	}
 
 	grunt.initConfig( {
 		pkg: grunt.file.readJSON( "package.json" ),
@@ -70,6 +62,11 @@ module.exports = function( grunt ) {
 					ajax: [ "manipulation/_evalUrl", "event/ajax" ],
 					callbacks: [ "deferred" ],
 					css: [ "effects", "dimensions", "offset" ],
+					"css/showHide": [ "effects" ],
+					deferred: {
+						remove: [ "ajax", "effects", "queue", "core/ready" ],
+						include: [ "core/ready-no-deferred" ]
+					},
 					sizzle: [ "css/hiddenVisibleSelectors", "effects/animatedSelector" ]
 				}
 			}
@@ -96,7 +93,7 @@ module.exports = function( grunt ) {
 
 					"requirejs/require.js": "requirejs/require.js",
 
-					"sinon/fake_timers.js": "sinon/lib/sinon/util/fake_timers.js",
+					"sinon/sinon.js": "sinon/pkg/sinon.js",
 					"sinon/LICENSE.txt": "sinon/LICENSE"
 				}
 			}
@@ -129,6 +126,7 @@ module.exports = function( grunt ) {
 				"test/data/testrunner.js",
 				"test/unit/animation.js",
 				"test/unit/basic.js",
+				"test/unit/support.js",
 				"test/unit/tween.js",
 				"test/unit/wrap.js"
 			],
@@ -151,6 +149,7 @@ module.exports = function( grunt ) {
 				"css",
 				"data",
 				"deferred",
+				"deprecated",
 				"dimensions",
 				"effects",
 				"event",
@@ -171,12 +170,15 @@ module.exports = function( grunt ) {
 		uglify: {
 			all: {
 				files: {
-					"dist/jquery.min.js": [ "dist/jquery.js" ]
+					"dist/<%= grunt.option('filename').replace('.js', '.min.js') %>":
+						"dist/<%= grunt.option('filename') %>"
 				},
 				options: {
 					preserveComments: false,
 					sourceMap: true,
-					sourceMapName: "dist/jquery.min.map",
+					ASCIIOnly: true,
+					sourceMapName:
+						"dist/<%= grunt.option('filename').replace('.js', '.min.map') %>",
 					report: "min",
 					beautify: {
 						"ascii_only": true
@@ -214,4 +216,6 @@ module.exports = function( grunt ) {
 	grunt.registerTask( "dev", [ "build:*:*", "lint", "uglify", "remove_map_comment", "dist:*" ] );
 
 	grunt.registerTask( "default", [ "dev", "test_fast", "compare_size" ] );
+
+	grunt.registerTask( "precommit_lint", [ "newer:jsonlint", "newer:jshint:all", "newer:jscs" ] );
 };
